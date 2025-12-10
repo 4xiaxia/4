@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Input, Button, List, Spin, Avatar, Card, Typography } from 'antd';
+import { Input, Button, List, Avatar, Card, Typography } from 'antd';
 import { UserOutlined, RobotOutlined } from '@ant-design/icons';
 import { generateText } from '../services/aiService';
 

@@ -13,14 +13,6 @@ interface OverviewStats {
   todayActive: number;
 }
 
-interface ContentStat {
-  redCulture: number;
-  ecology: number;
-  folk: number;
-  food: number;
-  celebrity: number;
-}
-
 interface RecentActivity {
   id: string;
   name: string;
@@ -30,7 +22,6 @@ interface RecentActivity {
 
 const AdminDashboard: React.FC = () => {
   const [overview, setOverview] = useState<OverviewStats | null>(null);
-  const [contentStats, setContentStats] = useState<ContentStat | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +31,6 @@ const AdminDashboard: React.FC = () => {
       try {
         const response = await getDashboardAnalytics();
         setOverview(response.data.overview);
-        setContentStats(response.data.contentStats);
         setRecentActivity(response.data.recentActivity);
       } catch (err) {
         setError(err instanceof Error ? err.message : '获取仪表板数据失败');
