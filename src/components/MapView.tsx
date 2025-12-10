@@ -2,14 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card, Spin, Alert } from 'antd';
 import * as mapService from '../services/mapService';
 import { getSpots } from '../services/apiService';
-
-// 定义景点数据类型
-interface Spot {
-  id: string;
-  name: string;
-  coord: string; // "lng,lat"
-  // ... 其他属性
-}
+import { Spot } from '../types';
 
 const MapView: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -26,24 +19,22 @@ const MapView: React.FC = () => {
       try {
         await mapService.loadMapSDK();
         
-        // 确保在组件挂载状态下继续
-        if (!isMounted) return;
+        if (!isMounted || !mapContainerRef.current) return;
 
-        const map = mapService.initMap(mapContainerRef.current, [118.205, 25.235], 16); // 东里村中心坐标
+        const map = mapService.initMap(mapContainerRef.current, [118.205, 25.235], 16);
         mapInstanceRef.current = map;
 
-        // 从后端获取景点数据
         const response = await getSpots();
         const spots: Spot[] = response.data;
 
         if (!isMounted) return;
 
-        // 在地图上标记景点
         spots.forEach(spot => {
-          const [lng, lat] = spot.coord.split(',').map(Number);
-          if (!isNaN(lng) && !isNaN(lat)) {
+          const coord = spot.coord ? spot.coord.split(',').map(Number) : null;
+          if (coord && coord.length === 2 && !isNaN(coord[0]) && !isNaN(coord[1])) {
+            const [lng, lat] = coord;
             const marker = mapService.addMarker(map, [lng, lat], { title: spot.name });
-            // 添加点击事件，弹出信息窗体
+
             marker.on('click', () => {
               const infoWindow = new window.AMap.InfoWindow({
                 content: `
@@ -53,16 +44,18 @@ const MapView: React.FC = () => {
                   </div>
                 `,
               });
-              infoWindow.open(map, marker.getPosition());
+              const position = marker.getPosition();
+              if (position) {
+                infoWindow.open(map, [position.getLng(), position.getLat()]);
+              }
             });
           }
         });
 
-        // 绘制路线 (示例：连接所有景点)
         const path = spots
           .map(spot => {
-            const [lng, lat] = spot.coord.split(',').map(Number);
-            return !isNaN(lng) && !isNaN(lat) ? [lng, lat] : null;
+            const coord = spot.coord ? spot.coord.split(',').map(Number) : null;
+            return coord && coord.length === 2 && !isNaN(coord[0]) && !isNaN(coord[1]) ? coord : null;
           })
           .filter(p => p !== null) as [number, number][];
 
@@ -81,19 +74,16 @@ const MapView: React.FC = () => {
       }
     };
 
-    // 将导航函数挂载到window上，以便信息窗体中的按钮可以调用
     (window as any).handleMapNav = mapService.navigateTo;
 
     initializeMap();
 
     return () => {
       isMounted = false;
-      // 销毁地图实例
       if (mapInstanceRef.current) {
         mapInstanceRef.current.destroy();
         mapInstanceRef.current = null;
       }
-      // 清理挂载到window上的函数
       delete (window as any).handleMapNav;
     };
   }, []);

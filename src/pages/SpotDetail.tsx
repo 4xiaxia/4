@@ -3,23 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { Card, Spin, Alert, Typography, Image, Button } from 'antd';
 import { LeftOutlined } from '@ant-design/icons';
 import { getSpotById } from '../services/apiService';
+import { Spot } from '../types';
 
 const { Title, Paragraph, Text } = Typography;
 
-// 定义景点详细数据类型
-interface SpotDetailData {
-  id: string;
-  name: string;
-  desc: string;
-  image: string;
-  location: string;
-  createdAt: string;
-  // ... 其他可能的属性
-}
-
 const SpotDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [spot, setSpot] = useState<SpotDetailData | null>(null);
+  const [spot, setSpot] = useState<Spot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,9 +62,9 @@ const SpotDetail: React.FC = () => {
           style={{ marginBottom: '20px' }}
         />
         <Paragraph>{spot.desc}</Paragraph>
-        <Text strong>位置：</Text><Text>{spot.location}</Text>
+        <Text strong>位置：</Text><Text>{spot.location || '未知'}</Text>
         <br />
-        <Text strong>记录时间：</Text><Text>{new Date(spot.createdAt).toLocaleDateString()}</Text>
+        <Text strong>记录时间：</Text><Text>{spot.createdAt ? new Date(spot.createdAt).toLocaleDateString() : '未知'}</Text>
       </Card>
     </div>
   );

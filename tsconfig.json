@@ -24,7 +24,7 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node", "amap-jsapi-v2-types"]
   },
   "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts"],
   "exclude": ["node_modules", "1", "dist", "1/**/*"]

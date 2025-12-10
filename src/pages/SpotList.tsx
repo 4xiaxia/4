@@ -2,16 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { List, Card, Spin, Alert, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import { getSpots } from '../services/apiService';
+import { Spot } from '../types';
 
 const { Title, Paragraph } = Typography;
-
-// 定义景点数据类型
-interface Spot {
-  id: string;
-  name: string;
-  desc: string;
-  image: string;
-}
 
 const SpotList: React.FC = () => {
   const [spots, setSpots] = useState<Spot[]>([]);
