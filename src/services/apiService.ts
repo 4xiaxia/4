@@ -1,180 +1,99 @@
-/**
- * 前台API服务
- * 处理移动端页面与后端API的对接
- */
+import axios from 'axios';
 
-// API基础配置
-const API_BASE_URL = 'http://localhost:3001/api';
+// 从环境变量中获取后端的API基础URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
-// 通用请求函数
-async function request<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<{ success: boolean; data?: T; error?: string; message?: string }> {
-  const url = `${API_BASE_URL}${endpoint}`;
+// 创建一个配置好的axios实例
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000, // 10秒超时
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-  const config: RequestInit = {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  };
-
-  try {
-    const response = await fetch(url, config);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+// 请求拦截器，用于在发送请求前附加认证Token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error(`API请求失败:`, error);
-    throw error;
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-}
+);
 
-// 景点API
-export const spotsApi = {
-  // 获取景点列表
-  getSpots: async (params?: {
-    category?: string;
-    type?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.category) queryParams.append('category', params.category);
-    if (params?.type) queryParams.append('type', params.type);
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-    const queryString = queryParams.toString()
-      ? `?${queryParams.toString()}`
-      : '';
-    return request<any[]>(`/spots${queryString}`);
+// 响应拦截器，用于统一处理API响应和错误
+apiClient.interceptors.response.use(
+  (response) => {
+    // 如果响应成功，直接返回数据部分
+    if (response.data && response.data.success) {
+      return response.data;
+    }
+    // 如果业务逻辑失败，则创建一个包含详细信息的错误
+    return Promise.reject(new Error(response.data.message || '业务错误'));
   },
+  (error) => {
+    // 处理网络错误等
+    const errorMessage = error.response?.data?.message || error.message || '网络请求错误';
+    return Promise.reject(new Error(errorMessage));
+  }
+);
 
-  // 获取景点详情
-  getSpotById: async (id: string) => {
-    return request<any>(`/spots/${id}`);
-  },
+/* ------------------------- 认证相关 API ------------------------- */
+
+export const sendLoginCode = (phone: string) => {
+  return apiClient.post('/auth/send-code', { phone });
 };
 
-// 人物API
-export const figuresApi = {
-  // 获取人物列表
-  getFigures: async (params?: {
-    category?: string;
-    type?: string;
-    year?: number;
-    page?: number;
-    limit?: number;
-  }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.category) queryParams.append('category', params.category);
-    if (params?.type) queryParams.append('type', params.type);
-    if (params?.year) queryParams.append('year', params.year.toString());
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-    const queryString = queryParams.toString()
-      ? `?${queryParams.toString()}`
-      : '';
-    return request<any[]>(`/figures${queryString}`);
-  },
-
-  // 获取人物详情
-  getFigureById: async (id: string) => {
-    return request<any>(`/figures/${id}`);
-  },
+export const loginWithCode = (phone: string, code: string) => {
+  return apiClient.post('/auth/login', { phone, code });
 };
 
-// 公告API
-export const announcementsApi = {
-  // 获取公告列表
-  getAnnouncements: async (params?: {
-    type?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.type) queryParams.append('type', params.type);
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
 
-    const queryString = queryParams.toString()
-      ? `?${queryParams.toString()}`
-      : '';
-    return request<any[]>(`/announcements${queryString}`);
-  },
+/* ------------------------- 景点相关 API ------------------------- */
+
+export const getSpots = (params?: { category?: string; page?: number; limit?: number }) => {
+  return apiClient.get('/spots', { params });
 };
 
-// 认证API
-export const authApi = {
-  // 发送验证码
-  sendCode: async (phone: string) => {
-    return request<{ message: string }>(`/auth/send-code`, {
-      method: 'POST',
-      body: JSON.stringify({ phone }),
-    });
-  },
-
-  // 用户登录
-  login: async (phone: string, code: string) => {
-    return request<{ user: any; token: string; message: string }>(
-      `/auth/login`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ phone, code }),
-      }
-    );
-  },
+export const getSpotById = (id: string) => {
+  return apiClient.get(`/spots/${id}`);
 };
 
-// 用户API
-export const userApi = {
-  // 获取用户资料
-  getProfile: async (token: string) => {
-    return request<any>(`/user/profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
+
+/* ------------------------- 人物相关 API ------------------------- */
+
+export const getFigures = (params?: { category?: string; page?: number; limit?: number }) => {
+  return apiClient.get('/figures', { params });
 };
 
-// 打卡API
-export const checkinApi = {
-  // 提交打卡
-  submitCheckin: async (token: string, spotId: string, spotName?: string) => {
-    return request<any>(`/checkin`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ spotId, spotName }),
-    });
-  },
 
-  // 获取打卡记录
-  getCheckinRecords: async (token: string) => {
-    return request<any[]>(`/checkin/records`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  },
+/* ------------------------- 公告相关 API ------------------------- */
+
+export const getAnnouncements = (params?: { type?: string; page?: number; limit?: number }) => {
+  return apiClient.get('/announcements', { params });
 };
 
-// 导出所有API服务
-export const apiService = {
-  spots: spotsApi,
-  figures: figuresApi,
-  announcements: announcementsApi,
-  auth: authApi,
-  user: userApi,
-  checkin: checkinApi,
+
+/* ------------------------- 打卡相关 API ------------------------- */
+
+export const checkIn = (spotId: string, spotName: string) => {
+  return apiClient.post('/checkin', { spotId, spotName });
 };
+
+
+/* ------------------------- 管理后台 API ------------------------- */
+
+export const submitContent = (data: { name: string; type: string; desc: string; location_desc: string; recommender_name: string }) => {
+  return apiClient.post('/admin/content/submit', data);
+};
+
+export const getDashboardAnalytics = () => {
+  return apiClient.get('/admin/analytics/dashboard');
+};
+
+export default apiClient;
