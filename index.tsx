@@ -1,25 +1,13 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ConfigProvider, message } from 'antd';
+import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
-import 'antd/dist/reset.css'; // 确保样式加载
-
-// 引入统一路由（这是我们唯一信任的路由中心）
-import UnifiedRouter from './src/routes/index';
+import App from './src/App'; // 修正导入路径
 import './index.css';
-import './src/pages/global.css';
-
-interface ErrorBoundaryProps {
-  children?: React.ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-}
 
 // 全局错误边界
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+class ErrorBoundary extends React.Component<{ children?: React.ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
 
   static getDerivedStateFromError() {
     return { hasError: true };
@@ -43,11 +31,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         </div>
       );
     }
-    return (this as any).props.children;
+    return this.props.children;
   }
 }
 
-// 渲染根节点
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
 
@@ -57,17 +44,8 @@ root.render(
   <React.StrictMode>
     <ErrorBoundary>
       <ConfigProvider locale={zhCN}>
-        <Suspense fallback={<div style={{ padding: 20, textAlign: 'center' }}>系统初始化中...</div>}>
-          <UnifiedRouter />
-        </Suspense>
+        <App />
       </ConfigProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );
-
-// 全局配置 Message
-message.config({
-  top: 50,
-  duration: 2,
-  maxCount: 3,
-});
